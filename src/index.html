@@ -18,9 +18,27 @@
         },
         scene: {
             preload: preload,
-            create: create
+            create: create,
+            update: update
         }
     };
+
+    /* Base stats for player's sprite's body */
+    let playerStats = {
+        jumpHeight: 300,
+        speed: 80,
+        maxSpeed: 400,
+        airJumpCount: 0,
+        airJumpMaxCount: 1
+    }
+
+    /* Frames holding buttons */
+    let inputHoldings = {
+        up: 0,
+        left: 0,
+        right: 0,
+        down: 0
+    }
 
     var game = new Phaser.Game(config);
 
@@ -66,10 +84,10 @@
         platforms.create(50, 250, 'ground');
         platforms.create(750, 220, 'ground');
 
-        let player = this.physics.add.sprite(100, 450, 'dude');
+        this.player = this.physics.add.sprite(100, 450, 'dude');
 
-        player.setBounce(0.2);
-        player.setCollideWorldBounds(true);
+        this.player.setBounce(0);
+        this.player.setCollideWorldBounds(true);
 
         this.anims.create({
             key: 'left',
@@ -91,13 +109,49 @@
             repeat: -1
         });
 
-        player.body.setGravityY(300);
-        this.physics.add.collider(player, platforms);
+        this.player.body.setGravityY(300);
+        this.physics.add.collider(this.player, platforms);
         this.physics.add.collider(bouncingStar, platforms);
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.player.stats = playerStats;
+        this.inputHoldings = inputHoldings;
+        console.log(this.player);
     }
 
-    function events () {
-        
+    function update () {
+        if (typeof this.cursors !== 'undefined' && this.cursors) {
+            /* Record holding frames */
+            this.inputHoldings.left = this.cursors.left.isDown ? this.inputHoldings.left + 1 : 0;
+            this.inputHoldings.right = this.cursors.right.isDown ? this.inputHoldings.right + 1 : 0;
+            this.inputHoldings.up = this.cursors.up.isDown ? this.inputHoldings.up + 1 : 0;
+            this.inputHoldings.down = this.cursors.down.isDown ? this.inputHoldings.down + 1 : 0;
+            this.inputHoldings.space = this.cursors.space.isDown ? this.inputHoldings.space + 1 : 0;
+
+            /* Walk management */
+            if (this.cursors.left.isDown) {
+                this.player.setVelocityX(-this.player.stats.speed + (this.player.body.velocity.x * this.inputHoldings.left / 100));
+                this.player.anims.play('left', true);
+            } else if (this.cursors.right.isDown) {
+                this.player.setVelocityX(this.player.stats.speed + (this.player.body.velocity.x  * this.inputHoldings.right / 100));
+                this.player.anims.play('right', true);
+            } else {
+                this.player.setVelocityX(this.player.body.velocity.x / 2);
+                this.player.anims.play('turn');
+            }
+
+            /* Jump counter reset */
+            if (this.player.body.touching.down && this.player.stats.airJumpCount) {
+                this.player.stats.airJumpCount = 0;
+            }
+
+            /* Jump management */
+            if (this.cursors.up.isDown && this.inputHoldings.up == 1 && this.player.stats.airJumpCount < this.player.stats.airJumpMaxCount) {
+                if (!this.player.body.touching.down) {
+                    this.player.stats.airJumpCount++;
+                }
+                this.player.setVelocityY(-this.player.stats.jumpHeight);
+            }
+        }
     }
     </script>
 
